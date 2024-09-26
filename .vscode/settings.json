@@ -1,0 +1,8 @@
+{
+  "search.exclude": {
+    "**/.yarn": true,
+    "**/.pnp.*": true
+  },
+  "prettier.prettierPath": ".yarn/sdks/prettier/index.cjs",
+  "editor.formatOnSave": true
+}
