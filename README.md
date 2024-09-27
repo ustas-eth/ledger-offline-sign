@@ -2,7 +2,7 @@
 
 <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/commit-activity/t/ustas-eth/ledger-offline-sign" /></a> <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/stars/ustas-eth/ledger-offline-sign" /></a> <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/license/ustas-eth/ledger-offline-sign" /></a>
 
-https://github.com/user-attachments/assets/643d534d-1f4b-4004-a419-f48c47eef046
+<video src="https://github.com/user-attachments/assets/643d534d-1f4b-4004-a419-f48c47eef046" controls></video>
 
 ## What
 
@@ -10,7 +10,6 @@ This is a tool that allows you to sign an offline Ethereum (or L2) transaction u
 
 As a result, you will receive a bytecode that you can broadcast when necessary.
 
-> [!WARNING]
 > The script is meant to be used by EVM power users. If you don't know what the derivation path is, how to calculate current nonce, or how to encode calldata it's better to use a normal wallet.
 
 ## Why
