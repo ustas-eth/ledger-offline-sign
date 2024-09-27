@@ -1,5 +1,9 @@
 # Ledger Offline Sign
 
+![GitHub commit activity](https://img.shields.io/github/commit-activity/t/ustas-eth/ledger-offline-sign) ![GitHub Repo stars](https://img.shields.io/github/stars/ustas-eth/ledger-offline-sign) ![GitHub License](https://img.shields.io/github/license/ustas-eth/ledger-offline-sign)
+
+https://github.com/user-attachments/assets/643d534d-1f4b-4004-a419-f48c47eef046
+
 ## What
 
 This is a tool that allows you to sign an offline Ethereum (or L2) transaction using Ledger (tested with Nano X) with full control of the transaction data.
