@@ -1,13 +1,30 @@
 {
-  "name": "LedgerOfflineSign",
-  "type": "module",
-  "packageManager": "yarn@4.5.0",
+  "name": "ledger-offline-sign",
+  "version": "1.0.0",
+  "description": "Sign transactions offline with Ledger",
+  "main": "index.js",
+  "author": "ustas-eth <writetoustas@riseup.net> (https://github.com/ustas-eth)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ustas-eth/ledger-offline-sign"
+  },
+  "keywords": [
+    "ledger",
+    "offline",
+    "sign",
+    "ethereum",
+    "wallet",
+    "evm"
+  ],
   "bin": {
     "ledger-offline-sign": "./src/index.js"
   },
   "scripts": {
     "start": "node src/index.js"
   },
+  "type": "module",
+  "packageManager": "yarn@4.5.0",
   "dependencies": {
     "@clack/prompts": "^0.7.0",
     "@ledgerhq/hw-app-eth": "^6.38.0",
