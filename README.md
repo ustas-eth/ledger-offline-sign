@@ -1,6 +1,6 @@
 # Ledger Offline Sign
 
-![GitHub commit activity](https://img.shields.io/github/commit-activity/t/ustas-eth/ledger-offline-sign) ![GitHub Repo stars](https://img.shields.io/github/stars/ustas-eth/ledger-offline-sign) ![GitHub License](https://img.shields.io/github/license/ustas-eth/ledger-offline-sign)
+<a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/commit-activity/t/ustas-eth/ledger-offline-sign" /></a> <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/stars/ustas-eth/ledger-offline-sign" /></a> <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/license/ustas-eth/ledger-offline-sign" /></a>
 
 https://github.com/user-attachments/assets/643d534d-1f4b-4004-a419-f48c47eef046
 
