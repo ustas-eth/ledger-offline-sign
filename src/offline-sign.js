@@ -15,7 +15,7 @@ import {
   transformLedgerSigtoEthers,
 } from "./lib.js"
 
-import commonErc20Tokens from "./commonErc20.js"
+import erc20List from "./data/erc20.js"
 
 export async function run() {
   intro(`Welcome to the Ledger Offline Sign (free of charge and telemetry)!`)
@@ -194,7 +194,7 @@ export async function run() {
             label: "Custom",
             value: "Custom",
           },
-          ...commonErc20Tokens[tx.chainId],
+          ...erc20List[tx.chainId],
         ],
       },
       {
