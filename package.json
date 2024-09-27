@@ -1,6 +1,6 @@
 {
   "name": "ledger-offline-sign",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Sign transactions offline with Ledger",
   "main": "index.js",
   "author": "ustas-eth <writetoustas@riseup.net> (https://github.com/ustas-eth)",
