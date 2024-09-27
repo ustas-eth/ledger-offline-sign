@@ -667,20 +667,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"LedgerOfflineSign@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "LedgerOfflineSign@workspace:."
-  dependencies:
-    "@clack/prompts": "npm:^0.7.0"
-    "@ledgerhq/hw-app-eth": "npm:^6.38.0"
-    "@ledgerhq/hw-transport-node-hid": "npm:^6.29.3"
-    ethers: "npm:^6.13.2"
-    prettier: "npm:3.3.3"
-  bin:
-    ledger-offline-sign: ./src/index.js
-  languageName: unknown
-  linkType: soft
-
 "abbrev@npm:^2.0.0":
   version: 2.0.0
   resolution: "abbrev@npm:2.0.0"
@@ -1481,6 +1467,20 @@ __metadata:
   checksum: 10c0/153525c1c1f770beadb8f8897dec2f1d2dcbee11d063fe5f61957a5b236bfd3d2a111ae2727e443aa6a848df5edb98b9ef237c78d56df49087b0ca8a232ca9cd
   languageName: node
   linkType: hard
+
+"ledger-offline-sign@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "ledger-offline-sign@workspace:."
+  dependencies:
+    "@clack/prompts": "npm:^0.7.0"
+    "@ledgerhq/hw-app-eth": "npm:^6.38.0"
+    "@ledgerhq/hw-transport-node-hid": "npm:^6.29.3"
+    ethers: "npm:^6.13.2"
+    prettier: "npm:3.3.3"
+  bin:
+    ledger-offline-sign: ./src/index.js
+  languageName: unknown
+  linkType: soft
 
 "lodash@npm:^4.17.21":
   version: 4.17.21
