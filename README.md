@@ -2,7 +2,7 @@
 
 <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/commit-activity/t/ustas-eth/ledger-offline-sign" /></a> <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/stars/ustas-eth/ledger-offline-sign" /></a> <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/license/ustas-eth/ledger-offline-sign" /></a>
 
-<video src="https://github.com/user-attachments/assets/643d534d-1f4b-4004-a419-f48c47eef046" controls></video>
+<video src="https://github.com/user-attachments/assets/3e1f1c6a-c6be-419f-87e7-47967b54afb3" controls></video>
 
 ## What
 
@@ -53,3 +53,5 @@ curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"
 ```
 
 Or a web interface like [Etherscan](https://etherscan.io/pushTx) or [MyCrypto](https://app.mycrypto.com/broadcast-transaction).
+
+<video src="https://github.com/user-attachments/assets/d9de2ac3-96ba-48d1-bb46-520173392829" controls></video>
