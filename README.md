@@ -2,7 +2,7 @@
 
 <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/commit-activity/t/ustas-eth/ledger-offline-sign" /></a> <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/stars/ustas-eth/ledger-offline-sign" /></a> <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/license/ustas-eth/ledger-offline-sign" /></a>
 
-<video src="https://github.com/user-attachments/assets/3e1f1c6a-c6be-419f-87e7-47967b54afb3" controls></video>
+<video src="https://github.com/user-attachments/assets/9ebd56b8-d263-458e-89fd-990d859fa020" controls></video>
 
 ## What
 
