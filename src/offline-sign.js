@@ -270,7 +270,7 @@ export async function run() {
     initialValue: true,
   })
 
-  if (isCancel(confirmation)) {
+  if (!confirmation || isCancel(confirmation)) {
     cancel("Operation cancelled.")
     process.exit(0)
   }
