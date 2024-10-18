@@ -186,7 +186,7 @@ export async function run() {
   )
 
   if (calldata === "erc20") {
-    tx.to = await selectOrRevert(
+    tx.to = await selectOrCustom(
       {
         message: "Enter the ERC20 token address",
         options: [
@@ -201,8 +201,7 @@ export async function run() {
         message: "Enter the token address",
         placeholder: "e.g., 0x0000000000000000000000000000000000000000",
         validate(value) {
-          if (!isAddress(value))
-            return `En0x137aa2bac36afbb90b264acfd5d3a99779c1d643246f9361686bde1d169a9ad86c3359f5b8867e8fe2df9aedc27cabf3dc92b28e56cd52e3093a53bcc34424171cter a valid address`
+          if (!isAddress(value)) return `Enter a valid address`
         },
       },
     )
