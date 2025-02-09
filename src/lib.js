@@ -1,5 +1,5 @@
 import { select, text, isCancel, cancel } from "@clack/prompts"
-import { Interface } from "ethers"
+import { Interface, parseUnits, getBigInt } from "ethers"
 
 export function checkCancel(value) {
   if (isCancel(value)) {
@@ -77,3 +77,13 @@ export const IERC20 = Interface.from([
     type: "function",
   },
 ])
+
+export function parseEthValue(value) {
+  const [amount, unit = "wei"] = value.split(" ")
+
+  try {
+    return parseUnits(amount, unit)
+  } catch {
+    return null
+  }
+}

@@ -4,6 +4,8 @@
 
 <video src="https://github.com/user-attachments/assets/9ebd56b8-d263-458e-89fd-990d859fa020" controls></video>
 
+> **Warning**: This tool is in beta. Please use it with caution and verify every transaction manually before broadcasting.
+
 ## What
 
 This is a tool that allows you to sign an offline Ethereum (or L2) transaction using Ledger (tested with Nano X) with full control of the transaction data.
