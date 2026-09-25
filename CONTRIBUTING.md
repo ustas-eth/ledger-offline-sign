@@ -30,6 +30,9 @@ Run the local checks before committing. There is no pull-request CI workflow.
 The existing release workflow runs checks before publishing a GitHub release to
 npm; creating a release is a separate, explicit publishing action.
 If publication fails, the same workflow can be run manually with the release tag.
+Publishing uses npm trusted publishing (OIDC), without an npm token. The package's
+trusted publisher must allow `npm publish` from GitHub user `ustas-eth`, repository
+`ledger-offline-sign`, workflow `publish.yaml`, with no environment name.
 
 Before releasing, test on a physical Ledger with an account that holds no funds:
 verify the displayed address, reject a transaction, cancel a prompt, reconnect,
