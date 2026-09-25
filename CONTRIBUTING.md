@@ -29,6 +29,7 @@ Use a branch and pull request for behavioral changes. Commit messages use
 Run the local checks before committing. There is no pull-request CI workflow.
 The existing release workflow runs checks before publishing a GitHub release to
 npm; creating a release is a separate, explicit publishing action.
+If publication fails, the same workflow can be run manually with the release tag.
 
 Before releasing, test on a physical Ledger with an account that holds no funds:
 verify the displayed address, reject a transaction, cancel a prompt, reconnect,
