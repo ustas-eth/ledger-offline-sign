@@ -12,22 +12,22 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish-npm:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
+          package-manager-cache: false
       - run: npm ci
       - run: npm run check
       - run: npm run check:install
       - run: npm run pack
       - run: npm publish ./dist/*.tgz --access public
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
