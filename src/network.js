@@ -2,6 +2,22 @@ import http from "node:http"
 import https from "node:https"
 import { isIP } from "node:net"
 
+// Only these errors contain messages safe to display without leaking RPC credentials.
+export class RequestError extends Error {}
+
+function connectionError(error) {
+  const messages = {
+    ENOTFOUND: "RPC hostname could not be resolved (DNS).",
+    EAI_AGAIN: "RPC hostname lookup failed temporarily (DNS).",
+    ECONNREFUSED: "RPC connection was refused.",
+    ECONNRESET: "RPC connection was reset.",
+    ETIMEDOUT: "RPC connection timed out.",
+    ENETUNREACH: "RPC network is unreachable.",
+    EHOSTUNREACH: "RPC host is unreachable.",
+  }
+  return new RequestError(messages[error.code] ?? "Connection failed (network, TLS, or endpoint unavailable).")
+}
+
 export function endpoint(value, { localOnly = false } = {}) {
   if (typeof value !== "string" || value.length > 4096 || /[\s\x00-\x1f\x7f<>${}]/.test(value))
     throw new Error("Enter an HTTPS RPC URL, or HTTP on loopback.")
@@ -55,11 +71,11 @@ export function requestJson(value, { payload, localOnly = false, timeout = 12000
         },
       },
       (response) => {
-        response.on("error", () => finish(new Error("Response connection failed.")))
+        response.on("error", () => finish(new RequestError("Response connection failed.")))
         if (response.statusCode !== 200) {
           response.resume()
           finish(
-            new Error(
+            new RequestError(
               response.statusCode >= 300 && response.statusCode < 400
                 ? "Endpoint redirect blocked."
                 : `Endpoint returned HTTP ${response.statusCode}.`,
@@ -72,7 +88,7 @@ export function requestJson(value, { payload, localOnly = false, timeout = 12000
         response.on("data", (chunk) => {
           bytes += chunk.length
           if (bytes > maxBytes) {
-            finish(new Error("Response exceeds the size limit."))
+            finish(new RequestError("Response exceeds the size limit."))
             response.destroy()
             return
           }
@@ -82,14 +98,14 @@ export function requestJson(value, { payload, localOnly = false, timeout = 12000
           try {
             finish(null, JSON.parse(Buffer.concat(chunks).toString("utf8")))
           } catch {
-            finish(new Error("Endpoint returned invalid JSON."))
+            finish(new RequestError("Endpoint returned invalid JSON."))
           }
         })
       },
     )
-    request.on("error", () => finish(new Error("Connection failed (network, TLS, or endpoint unavailable).")))
+    request.on("error", (error) => finish(connectionError(error)))
     timer = setTimeout(() => {
-      finish(new Error("Connection timed out."))
+      finish(new RequestError("Connection timed out."))
       request.destroy()
     }, timeout)
     request.end(body)

@@ -2,8 +2,10 @@ import * as prompts from "@clack/prompts"
 import { Transaction } from "ethers"
 import { buildTransaction, IERC20, transactionReview } from "./transaction.js"
 import { checkCancel, input } from "./lib.js"
-import { endpoint, endpointLabel, requestJson } from "./network.js"
+import { endpoint, endpointLabel, requestJson, RequestError } from "./network.js"
 import { privacyLabel, rpcCandidates } from "./catalog.js"
+
+class RpcCheckError extends Error {}
 
 export function signedTransaction(value) {
   let tx
@@ -23,7 +25,7 @@ export function signedTransaction(value) {
 async function rpc(url, method, params, id, { request, localOnly }) {
   const data = await request(url, { payload: { jsonrpc: "2.0", id, method, params }, localOnly })
   if (!data || data.jsonrpc !== "2.0" || data.id !== id || data.error || !Object.hasOwn(data, "result"))
-    throw new Error("RPC returned an error or an invalid response.")
+    throw new RequestError("RPC returned an error or an invalid response.")
   return data.result
 }
 
@@ -32,9 +34,14 @@ export async function submitTransaction(serialized, url, { approve, localOnly = 
   const raw = tx.serialized
   const hash = tx.hash
   const target = endpoint(url, { localOnly }).href
-  const chain = await rpc(target, "eth_chainId", [], 1, { request, localOnly })
-  if (typeof chain !== "string" || !/^0x[0-9a-fA-F]+$/.test(chain) || BigInt(chain) !== tx.chainId)
-    throw new Error("RPC chain ID does not match the signed transaction. Nothing was sent for broadcast.")
+  try {
+    const chain = await rpc(target, "eth_chainId", [], 1, { request, localOnly })
+    if (typeof chain !== "string" || !/^0x[0-9a-fA-F]+$/.test(chain) || BigInt(chain) !== tx.chainId)
+      throw new RequestError("RPC chain ID does not match the signed transaction.")
+  } catch (error) {
+    const detail = error instanceof RequestError ? ` ${error.message}` : ""
+    throw new RpcCheckError(`RPC chain check failed. No signed transaction was sent.${detail}`)
+  }
   if (!approve || (await approve(tx)) !== true) return { sent: false, hash }
   try {
     const result = await rpc(target, "eth_sendRawTransaction", [raw], 2, { request, localOnly })
@@ -78,32 +85,68 @@ export async function chooseRpc(chain, { ui = prompts, localOnly = false } = {})
 }
 
 export async function broadcastPrompt(value, { catalog, ui = prompts, localOnly = false, request = requestJson } = {}) {
-  if (!checkCancel(await ui.confirm({ message: "Broadcast this signed transaction now?", initialValue: false }))) return
+  if (
+    !checkCancel(
+      await ui.confirm({
+        message: "Prepare broadcast?",
+        active: "Choose RPC",
+        inactive: "Keep offline",
+        initialValue: false,
+      }),
+    )
+  )
+    return
   const tx = signedTransaction(value)
   const chain = catalog.chains.find((row) => row.id === String(tx.chainId))
-  const url = await chooseRpc(chain, { ui, localOnly })
-  ui.note(
-    `Selected RPC: ${endpointLabel(url)}\nThe RPC receives your IP and signed transaction. Broadcasting makes the transaction public.\nProvider privacy labels are claims, not verified guarantees.`,
-    "Broadcast",
-  )
-  const result = await submitTransaction(tx.serialized, url, {
-    request,
-    localOnly,
-    approve: async () =>
-      checkCancel(
-        await ui.confirm({
-          message: `RPC reports chain ${tx.chainId}. Send this transaction to ${endpointLabel(url)}?`,
-          initialValue: false,
+  let url = await chooseRpc(chain, { ui, localOnly })
+  while (true) {
+    ui.note(
+      `Selected RPC: ${endpointLabel(url)}\nChecking its chain ID. No transaction is sent during this check.\nThe RPC sees your IP. The next prompt lets you broadcast or cancel.\nProvider privacy labels are claims, not verified guarantees.`,
+      "RPC check",
+    )
+    try {
+      const result = await submitTransaction(tx.serialized, url, {
+        request,
+        localOnly,
+        approve: async () => {
+          const approved = checkCancel(
+            await ui.confirm({
+              message: `Chain ${tx.chainId} verified. Send transaction to ${endpointLabel(url)}?`,
+              active: "Broadcast now",
+              inactive: "Cancel",
+              initialValue: false,
+            }),
+          )
+          if (approved)
+            ui.note("Sending the signed transaction to the selected RPC. This makes it public.", "Broadcasting")
+          return approved
+        },
+      })
+      ui.note(
+        result.sent
+          ? `RPC accepted ${result.hash}\nThis does not confirm inclusion or execution.`
+          : "Not broadcast. Keep the signed transaction if you need it later.",
+        result.sent ? "Submitted" : "Cancelled",
+      )
+      return result
+    } catch (error) {
+      if (!(error instanceof RpcCheckError)) throw error
+      ui.note(error.message, "RPC check failed")
+      const action = checkCancel(
+        await ui.select({
+          message: "Signed transaction kept in memory. What next?",
+          initialValue: "stop",
+          options: [
+            { value: "retry", label: "Retry same RPC", hint: "check chain ID again" },
+            { value: "choose", label: "Choose another RPC" },
+            { value: "stop", label: "Keep offline", hint: "exit without broadcasting" },
+          ],
         }),
-      ),
-  })
-  ui.note(
-    result.sent
-      ? `RPC accepted ${result.hash}\nThis does not confirm inclusion or execution.`
-      : "Not broadcast. Keep the signed transaction if you need it later.",
-    result.sent ? "Submitted" : "Cancelled",
-  )
-  return result
+      )
+      if (action === "stop") return { sent: false, hash: tx.hash }
+      if (action === "choose") url = await chooseRpc(chain, { ui, localOnly })
+    }
+  }
 }
 
 export async function broadcastExisting({ catalog, ui = prompts, localOnly = false, request = requestJson }) {

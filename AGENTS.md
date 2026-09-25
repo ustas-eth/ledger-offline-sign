@@ -8,8 +8,10 @@ raw signed output. Follow CONTRIBUTING.md for checks and release boundaries.
   explicit online options; cached lists can be used offline. Never persist
   wallets, signed transactions, custom RPC URLs, search history, or analytics.
 - Broadcast only to the selected RPC after checking its chain ID and obtaining
-  explicit confirmation. Never retry, fail over, follow redirects, or probe other
-  endpoints. Treat errors after submission as an unknown broadcast outcome.
+  explicit confirmation. A failed chain check may be retried or the RPC changed
+  only by user choice; retain the signed bytes in memory. Never automatically
+  retry, fail over, follow redirects, or probe other endpoints. Treat errors after
+  submission as an unknown broadcast outcome; do not offer a send retry.
 - Cache only public metadata. Sanitize labels and validate contracts, decimals,
   URLs, and chain IDs; provider privacy labels are attributed claims.
 - Always pass explicit `null` metadata resolution to Ledger signing. Exercise

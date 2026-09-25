@@ -1,12 +1,12 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { createServer } from "node:http"
-import { once } from "node:events"
+import http, { createServer } from "node:http"
+import { EventEmitter, once } from "node:events"
 import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { Wallet } from "ethers"
-import { requestJson, endpoint, endpointLabel } from "../src/network.js"
+import { requestJson, endpoint, endpointLabel, RequestError } from "../src/network.js"
 import { CHAIN_URL, loadCatalog, makeCatalog, normalizeLists, rpcCandidates, privacyLabel } from "../src/catalog.js"
 import { broadcastPrompt, signedTransaction, submitTransaction } from "../src/broadcast.js"
 import { buildTransaction } from "../src/transaction.js"
@@ -267,6 +267,27 @@ test("loopback requests bypass environment proxies", async (t) => {
   assert.equal(proxyHits, 0)
 })
 
+test("connection diagnostics distinguish DNS/refusal errors without printing credentials", async (t) => {
+  for (const [code, expected] of [
+    ["ENOTFOUND", /DNS/],
+    ["ECONNREFUSED", /refused/],
+    ["UNKNOWN", /Connection failed/],
+  ]) {
+    t.mock.method(http, "request", () => {
+      const request = new EventEmitter()
+      request.end = () => queueMicrotask(() => request.emit("error", Object.assign(new Error("private-url"), { code })))
+      return request
+    })
+    await assert.rejects(requestJson("http://127.0.0.1:8545/private-url"), (error) => {
+      assert.ok(error instanceof RequestError)
+      assert.match(error.message, expected)
+      assert.doesNotMatch(error.message, /private-url/)
+      return true
+    })
+    t.mock.restoreAll()
+  }
+})
+
 for (const scenario of ["approve", "decline", "wrong-chain", "wrong-hash", "rpc-error", "disconnect"]) {
   test(`broadcast to a local fixture: ${scenario}`, async (t) => {
     const calls = []
@@ -339,6 +360,8 @@ test("declining broadcast sends no requests and offers no RPC picker", async () 
     ui: {
       confirm: async (options) => {
         assert.equal(options.initialValue, false)
+        assert.equal(options.active, "Choose RPC")
+        assert.equal(options.inactive, "Keep offline")
         return false
       },
       autocomplete: () => assert.fail("picker"),
@@ -358,9 +381,91 @@ test("invalid RPC envelopes stop before broadcast approval", async () => {
         request: async () => response,
         approve: () => assert.fail("approval"),
       }),
-      /^Error: RPC returned an error or an invalid response\.$/,
+      /RPC chain check failed\. No signed transaction was sent\. RPC returned an error or an invalid response\./,
     )
   }
+})
+
+for (const action of ["retry", "choose", "stop"]) {
+  test(`a failed chain check keeps the signed transaction available: ${action}`, async () => {
+    const calls = []
+    const notes = []
+    let picked = 0
+    let confirmations = 0
+    const catalog = makeCatalog({
+      chains: [
+        {
+          id: "31337",
+          name: "Fixture",
+          symbol: "ETH",
+          rpc: [{ url: "http://127.0.0.1:8545" }, { url: "http://127.0.0.1:8546" }],
+        },
+      ],
+      tokens: [],
+    })
+    const result = await broadcastPrompt(serialized, {
+      catalog,
+      localOnly: true,
+      ui: {
+        note: (message) => notes.push(message),
+        autocomplete: async () => String(picked++),
+        select: async (options) => {
+          assert.equal(options.initialValue, "stop")
+          assert.equal(calls.length, 1)
+          return action
+        },
+        confirm: async (options) => {
+          assert.equal(options.initialValue, false)
+          assert.equal(options.active, confirmations++ === 0 ? "Choose RPC" : "Broadcast now")
+          if (confirmations === 2)
+            assert.deepEqual(
+              calls.map(({ payload }) => payload.method),
+              ["eth_chainId", "eth_chainId"],
+            )
+          return true
+        },
+      },
+      request: async (url, { payload }) => {
+        calls.push({ url, payload })
+        if (calls.length === 1) throw new Error("private raw connection error")
+        return { jsonrpc: "2.0", id: payload.id, result: payload.method === "eth_chainId" ? "0x7a69" : unsigned.hash }
+      },
+    })
+    assert.equal(result.sent, action !== "stop")
+    assert.equal(result.hash, unsigned.hash)
+    assert.equal(picked, action === "choose" ? 2 : 1)
+    assert.ok(notes.some((message) => message.includes("No signed transaction was sent")))
+    assert.doesNotMatch(notes.join("\n"), /private raw connection error/)
+    if (action === "stop") assert.equal(calls.length, 1)
+    else {
+      assert.equal(calls.length, 3)
+      assert.equal(calls[1].url, `http://127.0.0.1:${action === "choose" ? 8546 : 8545}/`)
+      assert.deepEqual(calls[2].payload.params, [serialized])
+    }
+  })
+}
+
+test("submission failure reports an unknown outcome without offering a retry", async () => {
+  const calls = []
+  await assert.rejects(
+    broadcastPrompt(serialized, {
+      catalog: makeCatalog(),
+      localOnly: true,
+      ui: {
+        note() {},
+        confirm: async () => true,
+        autocomplete: async () => "local",
+        select: () => assert.fail("send retry must not be offered"),
+      },
+      request: async (_, { payload }) => {
+        calls.push(payload.method)
+        if (payload.method === "eth_sendRawTransaction") throw new Error("private response")
+        return { jsonrpc: "2.0", id: payload.id, result: "0x7a69" }
+      },
+    }),
+    /Broadcast outcome unknown/,
+  )
+  assert.deepEqual(calls, ["eth_chainId", "eth_sendRawTransaction"])
 })
 
 test("cache write failures remain visible to refresh-only callers", async (t) => {

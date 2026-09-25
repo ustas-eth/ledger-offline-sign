@@ -64,9 +64,12 @@ and writes.
 
 Broadcasting uses the RPC you select. The picker lists endpoints from the cached
 chain list, plus local and custom options. Add `--online` to `--broadcast` to
-fetch lists if needed. The app checks the RPC's chain ID, then asks before sending.
-It never retries or switches providers automatically. A successful submission
-means the RPC accepted the transaction, not that it was mined.
+fetch lists if needed. **Choose RPC** checks the endpoint's chain ID. Only
+**Broadcast now** sends the transaction; **Cancel** sends nothing. If the check
+fails, retry or choose another RPC without re-entering details or signing again.
+It never retries or switches providers automatically. Errors after sending report
+an unknown outcome. A successful submission means the RPC accepted the
+transaction, not that it was mined.
 
 Providers claiming no request logging appear first. These are attributed claims,
 not verified privacy guarantees. The RPC receives your IP and transaction;

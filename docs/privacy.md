@@ -15,8 +15,10 @@ Ledger signing always passes explicit `null` metadata resolution to the SDK.
 It does not use the SDK's online token/plugin resolver. List downloads happen
 before signing and contain no wallet addresses or transaction data.
 
-The selected RPC receives an `eth_chainId` request before the final send prompt.
-After approval, it receives one `eth_sendRawTransaction` request. No other RPCs
+Choosing an RPC sends an `eth_chainId` request before the final send prompt.
+A failed check can be retried or a different RPC selected explicitly. The signed
+transaction stays in memory, without saving a draft or signing again.
+Choosing **Broadcast now** sends one `eth_sendRawTransaction` request. No other RPCs
 are probed. There is no automatic retry, failover, receipt polling, or broadcast
 on startup. If the send response fails, the transaction may already have been
 relayed; the app reports an unknown outcome and prints its locally computed hash.
