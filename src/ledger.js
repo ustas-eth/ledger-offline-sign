@@ -28,33 +28,32 @@ export function ledgerError(error) {
   )
 }
 
-export async function openLedger(path, dependencies = loadLedger()) {
+export async function openLedger(path, dependencies) {
   const checkedPath = derivationPath(path)
-  const { Transport, App } = dependencies
+  const { Transport, App } = dependencies ?? loadLedger()
   let transport
   try {
     transport = await Transport.create(10000, 10000)
     transport.setExchangeTimeout(120000)
     const app = new App(transport)
     let closed = false
+    async function getAddress(display = true) {
+      try {
+        return address((await app.getAddress(checkedPath, display)).address)
+      } catch (error) {
+        throw ledgerError(error)
+      }
+    }
     return {
-      async getAddress(display = true) {
-        try {
-          return address((await app.getAddress(checkedPath, display)).address)
-        } catch (error) {
-          throw ledgerError(error)
-        }
-      },
+      getAddress,
       async sign(unsignedSerialized, expectedAddress) {
+        if ((await getAddress(false)) !== address(expectedAddress))
+          throw new Error("Ledger account changed. Start again and verify the address.")
         let result
         try {
-          const current = address((await app.getAddress(checkedPath, false)).address)
-          if (current !== address(expectedAddress)) throw new Error("ACCOUNT_CHANGED")
           // Explicit null is essential: undefined invokes Ledger's online resolution.
           result = await app.signTransaction(checkedPath, unsignedSerialized.slice(2), null)
         } catch (error) {
-          if (error.message === "ACCOUNT_CHANGED")
-            throw new Error("Ledger account changed. Start again and verify the address.")
           throw ledgerError(error)
         }
         return attachSignature(unsignedSerialized, result, expectedAddress)

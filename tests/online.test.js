@@ -7,7 +7,7 @@ import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { Wallet } from "ethers"
 import { requestJson, endpoint, endpointLabel } from "../src/network.js"
-import { loadCatalog, makeCatalog, normalizeLists, rpcCandidates, privacyLabel } from "../src/catalog.js"
+import { CHAIN_URL, loadCatalog, makeCatalog, normalizeLists, rpcCandidates, privacyLabel } from "../src/catalog.js"
 import { broadcastPrompt, signedTransaction, submitTransaction } from "../src/broadcast.js"
 import { buildTransaction } from "../src/transaction.js"
 
@@ -184,6 +184,29 @@ test("no-cache ignores saved data and creates no files", async (t) => {
   assert.equal(result.tokens[31337][0].decimals, 0)
   assert.equal(await readFile(path, "utf8"), "untrusted existing content")
   assert.deepEqual(await readdir(directory), ["lists.json"])
+})
+
+test("a failed list download waits for the other request before offline signing can start", async () => {
+  const { promise, resolve } = Promise.withResolvers()
+  let loaded = false
+  const task = loadCatalog({
+    online: true,
+    noCache: true,
+    request: async (url) => {
+      if (url === CHAIN_URL) throw new Error("fixture failure")
+      return promise
+    },
+  }).then((catalog) => {
+    loaded = true
+    return catalog
+  })
+  try {
+    await new Promise(setImmediate)
+    assert.equal(loaded, false)
+  } finally {
+    resolve(rawTokens)
+  }
+  assert.equal((await task).failed, true)
 })
 
 test("HTTP client blocks redirects and bounds responses without echoing URLs", async (t) => {

@@ -97,14 +97,23 @@ test("transport is closed if Ethereum app construction fails", async () => {
   assert.ok(fixture.calls.some(([name]) => name === "close"))
 })
 
-for (const outcome of ["cancel", "ctrl-c", "address-error", "sign-error", "success"]) {
+for (const outcome of [
+  "cancel",
+  "ctrl-c",
+  "address-error",
+  "sign-error",
+  "success",
+  "close-error",
+  "sign-close-error",
+]) {
   test(`interactive flow closes the device on ${outcome}`, async (t) => {
     const calls = []
     const logs = []
+    const notes = []
     t.mock.method(console, "log", (value) => logs.push(value))
     const ui = {
       intro() {},
-      note() {},
+      note: (message) => notes.push(message),
       outro() {},
       async confirm(options) {
         assert.equal(options.initialValue, false)
@@ -121,22 +130,29 @@ for (const outcome of ["cancel", "ctrl-c", "address-error", "sign-error", "succe
         calls.push("sign")
         assert.equal(serialized, tx.unsignedSerialized)
         assert.equal(from, wallet.address)
-        if (outcome === "sign-error") throw new Error("sign failed")
+        if (outcome === "sign-error" || outcome === "sign-close-error") throw new Error("sign failed")
         return { hash: "fixture-hash", serialized: "fixture-bytes" }
       },
       async close() {
         calls.push("close")
+        if (outcome === "close-error" || outcome === "sign-close-error") throw new Error("private raw USB error")
       },
     }
     const operation = run({ ui, collect: async () => ({ path, tx, metadata: {} }), connect: async () => session })
-    if (outcome === "success") {
+    if (outcome === "success" || outcome === "close-error") {
       await operation
       assert.deepEqual(logs, ["fixture-bytes"])
     } else {
-      await assert.rejects(operation, outcome === "cancel" || outcome === "ctrl-c" ? Cancelled : Error)
+      await assert.rejects(
+        operation,
+        outcome === "cancel" || outcome === "ctrl-c" ? Cancelled : /address failed|sign failed/,
+      )
       assert.deepEqual(logs, [])
     }
     assert.equal(calls.at(-1), "close")
+    assert.doesNotMatch(notes.join("\n"), /private raw USB error/)
+    if (outcome === "close-error" || outcome === "sign-close-error")
+      assert.ok(notes.some((message) => message.includes("Disconnect the Ledger")))
     if (outcome === "cancel" || outcome === "ctrl-c") assert.ok(!calls.includes("sign"))
   })
 }

@@ -1,7 +1,7 @@
 // Online packaging check. It never opens a Ledger or broadcasts a transaction.
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
-import { mkdtempSync, mkdirSync, copyFileSync, rmSync } from "node:fs"
+import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createRequire } from "node:module"
@@ -37,10 +37,8 @@ try {
       ? join(temporary, "node_modules", "ledger-offline-sign")
       : join(temporary, "lib", "node_modules", "ledger-offline-sign")
   const require = createRequire(join(installed, "node_modules", "@ledgerhq", "hw-app-eth", "package.json"))
-  for (const [name, version] of [
-    ["axios", "1.20.0"],
-    ["elliptic", "6.6.1"],
-  ])
+  const { overrides } = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
+  for (const [name, version] of Object.entries(overrides))
     assert.equal(require(`${name}/package.json`).version, version, `${name} override lost during packaging`)
   const { loadLedger } = await import(pathToFileURL(join(installed, "src", "ledger.js")))
   assert.equal(typeof loadLedger().Transport.create, "function")

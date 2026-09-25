@@ -1,7 +1,7 @@
 import * as prompts from "@clack/prompts"
 import { Transaction } from "ethers"
 import { buildTransaction, IERC20, transactionReview } from "./transaction.js"
-import { checkCancel, validate } from "./lib.js"
+import { checkCancel, input } from "./lib.js"
 import { endpoint, endpointLabel, requestJson } from "./network.js"
 import { privacyLabel, rpcCandidates } from "./catalog.js"
 
@@ -69,15 +69,11 @@ export async function chooseRpc(chain, { ui = prompts, localOnly = false } = {})
   )
   if (selected === "local") return "http://127.0.0.1:8545"
   if (selected === "custom")
-    return endpoint(
-      checkCancel(
-        await ui.password({
-          message: "RPC URL (hidden; not saved)",
-          validate: validate((value) => endpoint(value, { localOnly })),
-        }),
-      ),
-      { localOnly },
-    ).href
+    return input(
+      { message: "RPC URL (hidden; not saved)" },
+      (value) => endpoint(value, { localOnly }).href,
+      ui.password,
+    )
   return candidates[Number(selected)].url
 }
 
@@ -112,10 +108,7 @@ export async function broadcastPrompt(value, { catalog, ui = prompts, localOnly 
 
 export async function broadcastExisting({ catalog, ui = prompts, localOnly = false, request = requestJson }) {
   ui.intro("Broadcast signed transaction")
-  const raw = checkCancel(
-    await ui.password({ message: "Raw signed transaction (hidden; not saved)", validate: validate(signedTransaction) }),
-  )
-  const tx = signedTransaction(raw)
+  const tx = await input({ message: "Raw signed transaction (hidden; not saved)" }, signedTransaction, ui.password)
   const chain = catalog.chains.find((row) => row.id === String(tx.chainId))
   let token = catalog.tokens[tx.chainId]?.find((row) => row.value === tx.to)
   try {

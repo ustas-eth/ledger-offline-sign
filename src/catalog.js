@@ -210,14 +210,15 @@ export async function loadCatalog({
       ...makeCatalog(cached?.lists, { testnets }),
       status: cached ? "Using cached public lists; no downloads." : "No usable cache; using built-in lists.",
     }
-  if (!online && !refresh) throw new Error("List downloads require online mode.")
   let raw
   let lists
   try {
-    const [chains, tokens] = await Promise.all([
-      request(CHAIN_URL, { maxBytes: MAX_LIST_BYTES }),
-      request(TOKEN_URL, { maxBytes: MAX_LIST_BYTES }),
-    ])
+    // Finish both requests before entering the offline signing flow, even on failure.
+    const results = await Promise.allSettled(
+      [CHAIN_URL, TOKEN_URL].map(async (url) => request(url, { maxBytes: MAX_LIST_BYTES })),
+    )
+    if (results.some((result) => result.status === "rejected")) throw new Error("List download failed")
+    const [chains, tokens] = results.map((result) => result.value)
     lists = normalizeLists(chains, tokens)
     raw = { savedAt: now, chains, tokens }
   } catch {

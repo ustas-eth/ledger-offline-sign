@@ -7,21 +7,21 @@ export function checkCancel(value) {
   return value
 }
 
-export async function selectOrCustom(selectData, textData) {
+export async function selectOrCustom(selectData, textData, parse) {
   const { searchable, ...options } = selectData
   const result = checkCancel(await (searchable ? autocomplete : select)(options))
-  return result === "Custom" ? textOrRevert(textData) : result
+  return result === "Custom" ? input(textData, parse) : parse(result)
 }
 
-export async function textOrRevert(textData) {
-  return checkCancel(await text(textData))
+export async function input(options, parse, prompt = text) {
+  return parse(checkCancel(await prompt({ ...options, validate: validate(parse) })))
 }
 
-export async function selectOrRevert(selectData) {
+export async function selectValue(selectData) {
   return checkCancel(await select(selectData))
 }
 
-export function validate(parser) {
+function validate(parser) {
   return (value) => {
     try {
       parser(value)

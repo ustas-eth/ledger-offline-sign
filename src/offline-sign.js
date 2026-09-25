@@ -1,28 +1,10 @@
 import * as prompts from "@clack/prompts"
-import { buildTransaction, transactionReview } from "./transaction.js"
+import { transactionReview } from "./transaction.js"
 import { Cancelled, checkCancel } from "./lib.js"
 import { openLedger } from "./ledger.js"
-import { getDerivationPath } from "./input/walletData.js"
-import { getChainId } from "./input/chainid.js"
-import { getNonce } from "./input/nonce.js"
-import { getCalldata } from "./input/calldata.js"
-import { getGas } from "./input/gas.js"
 import { makeCatalog } from "./catalog.js"
 import { broadcastPrompt } from "./broadcast.js"
-
-export async function collectTransaction(catalog = makeCatalog(), searchable = false) {
-  const path = await getDerivationPath()
-  const chainId = await getChainId(catalog.chains, searchable)
-  const nonce = await getNonce()
-  const call = await getCalldata(chainId, catalog.tokens, searchable)
-  const gas = await getGas()
-  const chain = catalog.chains.find((item) => item.id === String(chainId))
-  return {
-    path,
-    tx: buildTransaction({ chainId, nonce, ...call, ...gas }),
-    metadata: { chainName: chain?.name, symbol: chain?.symbol, token: call.token },
-  }
-}
+import { collectTransaction } from "./input.js"
 
 export async function run({
   ui = prompts,
@@ -62,7 +44,12 @@ export async function run({
       throw new Cancelled("Cancelled. No signing request was sent.")
     signed = await session.sign(unsignedSerialized, from)
   } finally {
-    await session.close()
+    try {
+      await session.close()
+    } catch {
+      // Cleanup must not hide signed bytes or replace a signing/cancellation error.
+      ui.note("Could not close the USB connection. Disconnect the Ledger before reconnecting.", "USB cleanup")
+    }
   }
   ui.note(`Signer verified. Transaction hash:\n${signed.hash}`, "Signed — not broadcast")
   ui.outro("Raw signed transaction (anyone holding it can broadcast it):")

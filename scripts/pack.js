@@ -15,10 +15,10 @@ try {
   const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
   delete manifest.overrides
   delete manifest.devDependencies
-  manifest.scripts = { start: "node src/index.js" }
+  manifest.scripts = { start: manifest.scripts.start }
   manifest.bundleDependencies = ["@ledgerhq/hw-app-eth"]
   writeFileSync(join(stage, "package.json"), JSON.stringify(manifest, null, 2) + "\n")
-  for (const path of ["src", "LICENSE", "README.md", "docs/privacy.md", "node_modules"])
+  for (const path of [...manifest.files, "node_modules"])
     cpSync(join(root, path), join(stage, path), { recursive: true, verbatimSymlinks: true })
   if (!dryRun) mkdirSync(destination, { recursive: true })
   const result = spawnSync(
