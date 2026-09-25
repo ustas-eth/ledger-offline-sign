@@ -1,125 +1,69 @@
-import { isAddress, parseUnits } from "ethers"
-import { selectOrCustom, textOrRevert, IERC20, parseEthValue } from "../lib.js"
-
+import { selectOrCustom, selectOrRevert, textOrRevert, validate } from "../lib.js"
+import { address, amount, calldata, integer, IERC20, nativeAmount } from "../transaction.js"
 import erc20ByChain from "../data/erc20.js"
 
 export async function getCalldata(chainId) {
-  const params = {}
-
-  // ask the user to select the calldata type
-  // it will be either a custom calldata like "0x112233"
-  // or the "erc20" placeholder for ERC20 transfer (to be filled later)
-  params.data = await selectOrCustom(
-    {
-      message: "Select the calldata type",
-      placeholder: "e.g., 0x12dd34ff",
-      options: [
+  const kind = await selectOrRevert({
+    message: "Transaction",
+    options: [
+      { value: "native", label: "Native transfer" },
+      { value: "erc20", label: "ERC-20 transfer" },
+      { value: "custom", label: "Contract call", hint: "custom calldata" },
+    ],
+  })
+  if (kind === "erc20") {
+    const tokens = erc20ByChain[chainId] ?? []
+    const to = address(
+      await selectOrCustom(
         {
-          label: "Custom",
-          value: "Custom",
+          message: "Token (built-in metadata is static; verify the contract)",
+          options: [
+            ...tokens.map((token) => ({ value: token.value, label: token.symbol, hint: token.value })),
+            { value: "Custom", label: "Custom token" },
+          ],
         },
-        {
-          label: "Native transfer",
-          value: "0x",
-        },
-        {
-          label: "ERC20 transfer",
-          value: "erc20",
-        },
-        {
-          label: "Empty calldata",
-          value: "0x",
-        },
-      ],
-    },
-    {
-      message: "Enter the custom calldata (or leave 0x to skip)",
-      placeholder: "e.g., 0x12dd34ff",
-      initialValue: "0x",
-      validate(value) {
-        if (!/^0x[0-9A-Fa-f]*$/i.test(value) || value.length % 2 !== 0)
-          return `Enter a valid hex string (with 0x prefix and even length)`
-      },
-    },
-  )
-
-  if (params.data === "erc20") {
-    const erc20List = erc20ByChain[chainId]
-
-    params.to = await selectOrCustom(
-      {
-        message: "Enter the ERC20 token address",
-        options: [
-          {
-            label: "Custom",
-            value: "Custom",
-          },
-          ...erc20List,
-        ],
-      },
-      {
-        message: "Enter the token address",
-        placeholder: "e.g., 0x0000000000000000000000000000000000000000",
-        validate(value) {
-          if (!isAddress(value)) return `Enter a valid address`
-        },
-      },
+        { message: "Token contract address", validate: validate(address) },
+      ),
     )
-
-    // try to find decimals in the list or ask the user
+    const known = tokens.find((token) => address(token.value) === to)
     const decimals =
-      erc20List.find((item) => item.value === params.to)?.decimals ||
-      (await textOrRevert({
-        message: "Enter the ERC20 token decimals",
-        placeholder: "e.g., 18",
-        initialValue: "18",
-        validate(value) {
-          if (!/^\d+$/.test(value)) return `Enter a valid number`
-        },
-      }))
-
-    const receiver = await textOrRevert({
-      message: "Enter the receiver address",
-      placeholder: "e.g., 0x0000000000000000000000000000000000000000",
-      validate(value) {
-        if (!isAddress(value)) return `Enter a valid address`
-      },
-    })
-
-    const amount = parseUnits(
+      known?.decimals ??
+      Number(
+        await textOrRevert({
+          message: "Token decimals (from the contract, not fetched)",
+          validate: validate((value) => integer(value, { max: 255n, name: "Decimals" })),
+        }),
+      )
+    const recipient = address(await textOrRevert({ message: "Token recipient", validate: validate(address) }))
+    const units = amount(
       await textOrRevert({
-        message: `Enter the ERC20 transfer amount (${decimals} decimals)`,
-        placeholder: "e.g., 10.01",
-        validate(value) {
-          if (!/^-?\d*(\.\d+)?$/.test(value)) return `Enter a valid amount`
-        },
+        message: `Amount in ${known?.symbol ?? "tokens"} (${decimals} decimals)`,
+        validate: validate((value) => amount(value, decimals)),
       }),
-      parseInt(decimals),
+      decimals,
     )
-
-    // override the placeholder calldata with the ERC20 transfer
-    params.data = IERC20.encodeFunctionData("transfer", [receiver, amount])
-
-    params.value = 0
-  } else {
-    params.to = await textOrRevert({
-      message: "Enter the receiver address",
-      placeholder: "e.g., 0x0000000000000000000000000000000000000000",
-      validate(value) {
-        if (!isAddress(value)) return `Enter a valid address`
-      },
-    })
-
-    const value = await textOrRevert({
-      message: "Enter the value",
-      placeholder: "e.g., '1 ether', '100 gwei', or '12345' (wei)",
-      validate(value) {
-        if (parseEthValue(value) == null) return `Enter a valid value`
-      },
-    })
-
-    params.value = parseEthValue(value)
+    return {
+      to,
+      value: 0n,
+      data: IERC20.encodeFunctionData("transfer", [recipient, units]),
+      token: { symbol: known?.symbol ?? "custom token", decimals },
+    }
   }
-
-  return params
+  const to = address(
+    await textOrRevert({
+      message: kind === "native" ? "Recipient address" : "Contract address",
+      validate: validate(address),
+    }),
+  )
+  const data =
+    kind === "native"
+      ? "0x"
+      : calldata(await textOrRevert({ message: "Calldata (0x for empty)", validate: validate(calldata) }))
+  const value = nativeAmount(
+    await textOrRevert({
+      message: "Native value (e.g. 0.1 ether; use 0 for none)",
+      validate: validate(nativeAmount),
+    }),
+  )
+  return { to, value, data }
 }

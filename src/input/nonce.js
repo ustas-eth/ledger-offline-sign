@@ -1,12 +1,10 @@
-import { textOrRevert } from "../lib.js"
+import { textOrRevert, validate } from "../lib.js"
+import { integer } from "../transaction.js"
 
 export async function getNonce() {
   return textOrRevert({
-    message: "Enter the nonce",
-    placeholder: "e.g., 0",
-    initialValue: "0",
-    validate(value) {
-      if (!/^\d+$/.test(value)) return "Enter a valid number"
-    },
+    message: "Nonce (obtain it before going offline; include pending transactions)",
+    placeholder: "No network lookup",
+    validate: validate((value) => integer(value, { max: BigInt(Number.MAX_SAFE_INTEGER), name: "Nonce" })),
   })
 }

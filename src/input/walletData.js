@@ -1,34 +1,22 @@
-import { text, group, cancel } from "@clack/prompts"
+import { selectOrRevert, textOrRevert, validate } from "../lib.js"
+import { derivationPath, integer } from "../transaction.js"
 
 export async function getDerivationPath() {
-  const walletData = await group(
-    {
-      derivationPath: () =>
-        text({
-          message: "Enter the derivation path format",
-          placeholder: "e.g., 44'/60'/i'/0/0",
-          initialValue: "44'/60'/i'/0/0",
-          validate(value) {
-            if (value.length === 0) return `Value is required`
-          },
-        }),
-      index: () =>
-        text({
-          message: "Enter an index for the derivation path",
-          placeholder: "e.g., 0",
-          initialValue: "0",
-          validate(value) {
-            if (/^\d+$/.test(value) === false) return `Enter a valid number`
-          },
-        }),
-    },
-    {
-      onCancel: () => {
-        cancel("Operation was cancelled")
-        process.exit(0)
-      },
-    },
+  const mode = await selectOrRevert({
+    message: "Ledger account",
+    options: [
+      { value: "live", label: "Ledger Live", hint: "44'/60'/account'/0/0" },
+      { value: "custom", label: "Custom derivation path" },
+    ],
+  })
+  if (mode === "custom")
+    return derivationPath(await textOrRevert({ message: "Derivation path", validate: validate(derivationPath) }))
+  const index = integer(
+    await textOrRevert({
+      message: "Account index (0 is the first account)",
+      initialValue: "0",
+      validate: validate((value) => integer(value, { max: 2147483647n, name: "Account index" })),
+    }),
   )
-
-  return walletData.derivationPath.replace("i", walletData.index)
+  return `44'/60'/${index}'/0/0`
 }

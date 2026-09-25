@@ -1,59 +1,81 @@
 # Ledger Offline Sign
 
-<a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/commit-activity/t/ustas-eth/ledger-offline-sign" /></a> <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/stars/ustas-eth/ledger-offline-sign" /></a> <a href="https://github.com/ustas-eth/ledger-offline-sign"><img src ="https://img.shields.io/github/license/ustas-eth/ledger-offline-sign" /></a>
+Prepare an EVM transaction, review every field, and sign it with a USB Ledger.
+The result is a raw signed transaction you can broadcast separately.
 
-<video src="https://github.com/user-attachments/assets/9ebd56b8-d263-458e-89fd-990d859fa020" controls></video>
+![Transaction review with demo addresses](docs/screenshots/review.png)
 
-> **Warning**: This tool is in beta. Please use it with caution and verify every transaction manually before broadcasting.
+Native transfers, ERC-20 transfers, and custom calldata. Common networks and
+tokens come first; custom chain IDs, contracts, and derivation paths remain
+available. EIP-1559 transactions only, with 18-decimal native currency units.
 
-## What
+## Install
 
-This is a tool that allows you to sign an offline Ethereum (or L2) transaction using Ledger (tested with Nano X) with full control of the transaction data.
+Use **Node.js 22+** and a Ledger with the Ethereum app installed. Install while
+online, then disconnect networking before signing.
 
-As a result, you will receive a bytecode that you can broadcast when necessary.
+To use this checkout:
 
-> The script is meant to be used by EVM power users. If you don't know what the derivation path is, how to calculate current nonce, or how to encode calldata it's better to use a normal wallet.
-
-## Why
-
-It's not safe to take Ledger if you have a meeting or there are cameras around that can catch your PIN on video. A good solution to this problem is to sign the transaction offline beforehand and then broadcast it when needed without the risk of exposing your entire wallet or getting a physical rekt.
-
-I found such simple action quite hard to do with existing solutions (it's basically what any wallet does minus the network broadcasting). They either don't provide a way to change the derivation path / chain id that I need or throw errors. That's the main reason I decided to make this tool.
-
-## Privacy and telemetry
-
-The script doesn't attempt to make any network requests and doesn't need an RPC to work. All the information you enter will not be stored anywhere except temporarily in your terminal.
-
-The two weak points here are:
-
-- Transaction broadcasting, obviously. Depending on which RPC you use to broadcast the transaction, tracking your IP address and collecting other information might be possible.
-- Supply chain attack, because you need to download `@ledgerhq/hw-app-eth`, `@ledgerhq/hw-transport-node-hid`, `ethers`, and `@clack/prompts` in order to run the script. The versions of these packages can change, and vendors may add telemetry.
-
-It's better to turn off the network connection or use a VM if you're concerned about privacy.
-
-## Usage
-
-You'll need NodeJS (v20 is tested) for all the installation methods.
-
-### Run with `npx`
-
-The easiest way to run the tool is to use: `npx ledger-offline-sign`
-This command will download and run the latest version of the script from the npm servers.
-
-### Using git
-
-1. Clone the repository with `git clone https://github.com/ustas-eth/ledger-offline-sign`
-2. Run `yarn` to install the required dependencies
-3. Run `yarn start` to start the script
-
-## Broadcasting
-
-To broadcast the transaction you can use any public RPC endpoint (see on [Chainlist](https://chainlist.org/)) with this command:
-
-```bash
-curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xTRANSACTION_BYTECODE"],"id":1}' https://LINK_TO_RPC_ENDPOINT
+```sh
+git clone https://github.com/ustas-eth/ledger-offline-sign.git
+cd ledger-offline-sign
+npm ci
+npm start
 ```
 
-Or a web interface like [Etherscan](https://etherscan.io/pushTx) or [MyCrypto](https://app.mycrypto.com/broadcast-transaction).
+To install the checkout as a command:
 
-<video src="https://github.com/user-attachments/assets/d9de2ac3-96ba-48d1-bb46-520173392829" controls></video>
+```sh
+npm install -g .
+ledger-offline-sign
+```
+
+The existing npm release is also available with `npm install -g ledger-offline-sign`;
+it may lag behind this checkout. Avoid `npx` on the offline machine: it can try
+to download packages. `ledger-offline-sign --help` and `--version` work without a
+connected device.
+
+**Linux:** native USB dependencies may need compilation. On Debian/Ubuntu, install
+`build-essential python3 pkg-config libusb-1.0-0-dev libudev-dev` first. Other
+Linux distributions need the equivalent packages. Follow Ledger's
+[USB permissions guidance](https://github.com/LedgerHQ/udev-rules) if the device
+is inaccessible; don't run this utility as root.
+
+## Sign
+
+1. Prepare the nonce (including pending transactions), gas limit, fees, and
+   recipient/contract details before going offline. Nothing is fetched for you.
+2. Choose the account, network, and transfer or contract call. Bare amounts mean
+   **wei**; use `0.1 ether` or `1 gwei` for native value and fees. Token amounts
+   use the selected token's decimals.
+3. Connect and unlock the Ledger, open Ethereum, and close other wallet apps.
+   Verify the account address on the device.
+4. Review the recipient, amount, nonce, calldata, gas limit, and fee cap. Confirm
+   signing in the terminal, then on the Ledger.
+5. Copy the raw signed transaction. **Anyone holding it can broadcast it.**
+
+The maximum fee includes the priority fee. The execution cost cap excludes any
+additional L2 data fees. No balances, transaction simulation, gas estimates, or
+nonce checks are available offline. Static token presets are conveniences:
+verify the chain, contract, and decimals independently.
+
+For contract calls, the device may require blind signing. The terminal's decoded
+review is not a substitute for a trusted device display. Do not approve calldata
+you do not understand. Ctrl+C cancels terminal prompts; reject a pending request
+on the device to leave the signing step.
+
+## Privacy
+
+No RPC, telemetry, runtime metadata downloads, automatic broadcast, session files,
+or transaction logs. The Ledger SDK is called with online metadata resolution
+disabled, and the returned signature is checked against the reviewed account
+and transaction.
+
+Your terminal can retain scrollback; terminal recording, OS monitoring, swap,
+crash dumps, and package-manager caches/logs are outside this tool. Network
+isolation provides a stronger boundary than application promises.
+[Privacy details](docs/privacy.md) · [Contributing](CONTRIBUTING.md)
+
+The screenshot shows the actual interface with a simulated Ledger and dummy
+addresses. Automated tests use fake devices; the renovated flow still needs a
+physical-device smoke test before a release.

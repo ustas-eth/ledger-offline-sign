@@ -1,40 +1,23 @@
-import { parseEthValue, textOrRevert } from "../lib.js"
+import { textOrRevert, validate } from "../lib.js"
+import { nativeAmount, integer } from "../transaction.js"
 
-export async function getGas(txType, calldata) {
-  const params = {}
-
-  if (txType === 2) {
-    const maxPriorityFeePerGas = await textOrRevert({
-      message: "Enter the max priority fee per gas",
-      placeholder: "e.g., '1 ether', '100 gwei', or '12345' (wei)",
-      initialValue: "1 gwei",
-      validate(value) {
-        if (parseEthValue(value) == null) return `Enter a valid value`
-      },
-    })
-
-    const maxBaseFee = await textOrRevert({
-      message: "Enter the base fee per gas",
-      placeholder: "e.g., '1 ether', '100 gwei', or '12345' (wei)",
-      initialValue: "1 gwei",
-      validate(value) {
-        if (parseEthValue(value) == null) return `Enter a valid value`
-      },
-    })
-
-    params.maxPriorityFeePerGas = parseEthValue(maxPriorityFeePerGas)
-    params.maxBaseFee = parseEthValue(maxBaseFee)
-  }
-
-  // suggest 120000 if calldata is detected, 21000 for calls without it
-  params.gasLimit = await textOrRevert({
-    message: "Enter the gas limit",
-    placeholder: "e.g., 21000",
-    initialValue: calldata.length > 2 ? "120000" : "21000",
-    validate(value) {
-      if (!/^\d+$/.test(value)) return `Enter a valid number`
-    },
+export async function getGas() {
+  const maxPriorityFeePerGas = nativeAmount(
+    await textOrRevert({
+      message: "Priority fee per gas (e.g. 1 gwei)",
+      validate: validate(nativeAmount),
+    }),
+  )
+  const maxFeePerGas = nativeAmount(
+    await textOrRevert({
+      message: "Maximum total fee per gas, including priority fee (e.g. 20 gwei)",
+      validate: validate((value) => integer(nativeAmount(value), { min: maxPriorityFeePerGas, name: "Maximum fee" })),
+    }),
+  )
+  const gasLimit = await textOrRevert({
+    message: "Gas limit (21000 for a plain transfer to an ordinary account; contracts need more)",
+    placeholder: "Use your independently estimated limit",
+    validate: validate((value) => integer(value, { min: 21000n, max: 18446744073709551615n, name: "Gas limit" })),
   })
-
-  return params
+  return { maxPriorityFeePerGas, maxFeePerGas, gasLimit }
 }

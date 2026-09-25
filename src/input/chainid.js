@@ -1,48 +1,20 @@
-import { selectOrCustom } from "../lib.js"
+import { selectOrCustom, validate } from "../lib.js"
+import { integer } from "../transaction.js"
+import { chains } from "../data/chains.js"
 
 export async function getChainId() {
   return selectOrCustom(
     {
-      message: "Select the chain id",
+      message: "Network",
       initialValue: "1",
       options: [
-        {
-          label: "Custom",
-          value: "Custom",
-        },
-        {
-          label: "1 - Ethereum Mainnet",
-          value: "1",
-        },
-        {
-          label: "137 - Polygon Mainnet",
-          value: "137",
-        },
-        {
-          label: "8453 - Base Mainnet",
-          value: "8453",
-        },
-        {
-          label: "42161 - Arbitrum Mainnet",
-          value: "42161",
-        },
-        {
-          label: "10 - Optimism Mainnet",
-          value: "10",
-        },
-        {
-          label: "56 - BSC Mainnet",
-          value: "56",
-        },
-        {
-          label: "100 - Gnosis Chain Mainnet",
-          value: "100",
-        },
+        ...chains.map(({ id, name }) => ({ value: id, label: name, hint: `chain ID ${id}` })),
+        { value: "Custom", label: "Custom chain ID" },
       ],
     },
     {
-      message: "Enter the custom chain id (see on chainlist.org)",
-      initialValue: "1",
+      message: "Chain ID (must support EIP-1559)",
+      validate: validate((value) => integer(value, { min: 1n, max: 4294967295n, name: "Chain ID" })),
     },
   )
 }
