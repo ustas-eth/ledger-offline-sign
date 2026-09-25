@@ -17,8 +17,8 @@ checks that security overrides survived packaging, and exercises the installed
 SDK under network guards. Installation itself needs network access or a warm npm
 cache. Run it when changing dependencies or distribution.
 
-Never use a real wallet, seed phrase, personal address, RPC, or live broadcast in
-tests or screenshots. Review `npm run pack -- --dry-run` when changing packaging.
+Use only local mock RPCs for broadcast tests. Never use a real wallet, seed
+phrase, personal address, or live broadcast in tests or screenshots. Review `npm run pack -- --dry-run` when changing packaging.
 `npm run pack` writes the release tarball under `dist/`; publish that tarball,
 not the development directory. A temporary staging manifest keeps npm override
 and bundle rules from conflicting.
@@ -42,6 +42,7 @@ Ledger. The demo entry point cannot sign and is excluded from the npm package:
 
 ```sh
 uv run --no-project --with pexpect --with pyte --with pillow python scripts/screenshots.py
+uv run --no-project --with pexpect python scripts/terminal-broadcast.py
 ```
 
 Inspect generated images before committing them. Do not add simulated-device

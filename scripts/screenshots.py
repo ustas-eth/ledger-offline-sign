@@ -52,7 +52,7 @@ def render(screen, name):
 
 
 def exercise(kind):
-    child = pexpect.spawn("node", ["scripts/demo.mjs"], cwd=str(ROOT), env={**os.environ, "TERM": "xterm-256color", "FORCE_COLOR": "1"}, encoding="utf-8", timeout=15, dimensions=(ROWS, COLS))
+    child = pexpect.spawn("node", ["scripts/demo.mjs", *(["--lists"] if kind == "lists" else [])], cwd=str(ROOT), env={**os.environ, "TERM": "xterm-256color", "FORCE_COLOR": "1"}, encoding="utf-8", timeout=15, dimensions=(ROWS, COLS))
     child.delaybeforesend = 0.1
     capture = Capture(child)
     child.logfile_read = capture
@@ -65,22 +65,24 @@ def exercise(kind):
     try:
         answer("Ledger account")
         answer("Account index")
-        if kind == "custom":
-            answer("Network", downs=7)
-            answer("Chain ID (must support EIP-1559)", "31337")
+        if kind == "lists":
+            answer("Network", "31337")
+        elif kind == "custom":
+            answer("Network", downs=8)
+            answer("Chain ID (must support EIP-1559)", "31338")
         else:
             answer("Network")
         answer("Nonce (obtain it", "7")
         answer("Transaction", downs=1 if kind != "native" else 0)
         if kind == "custom":
-            answer("Token (built-in metadata")
+            answer("Token (local metadata")
             answer("Token contract address", "0x3333333333333333333333333333333333333333")
             answer("Token decimals", "0")
-        elif kind == "token":
-            answer("Token (built-in metadata")
+        elif kind in ("token", "lists"):
+            answer("Token (local metadata", "DEMO" if kind == "lists" else "")
         if kind != "native":
             answer("Token recipient", ADDRESS)
-            answer("Amount in", "42" if kind == "custom" else "12.345678")
+            answer("Amount in", "42" if kind in ("custom", "lists") else "12.345678")
         else:
             answer("Recipient address", ADDRESS)
             answer("Native value", "0.1 ether")
@@ -97,6 +99,8 @@ def exercise(kind):
             pass
         plain = "\n".join(capture.screen.display)
         assert "Gas limit" in plain and "Execution cap" in plain
+        if kind == "lists":
+            assert "42 DEMO" in plain and "demo list" in plain
         if kind == "custom":
             assert "42 custom token" in plain and "0 decimals" in plain
         if kind == "token":
@@ -113,5 +117,5 @@ def exercise(kind):
 
 
 if __name__ == "__main__":
-    for kind in ("native", "token", "custom"):
+    for kind in ("native", "token", "custom", "lists"):
         exercise(kind)

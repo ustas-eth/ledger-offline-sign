@@ -1,20 +1,14 @@
 # Ledger Offline Sign
 
-Prepare an EVM transaction, review every field, and sign it with a USB Ledger.
-The result is a raw signed transaction you can broadcast separately.
+Sign EVM transactions with a USB Ledger. Supports native transfers, ERC-20
+transfers, and custom calldata. Signing works offline; public lists and RPC
+broadcasting are optional.
 
-![Transaction review with demo addresses](docs/screenshots/review.png)
+![Transaction review with dummy addresses](docs/screenshots/review.png)
 
-Native transfers, ERC-20 transfers, and custom calldata. Common networks and
-tokens come first; custom chain IDs, contracts, and derivation paths remain
-available. EIP-1559 transactions only, with 18-decimal native currency units.
+## Run locally
 
-## Install
-
-Use **Node.js 22+** and a Ledger with the Ethereum app installed. Install while
-online, then disconnect networking before signing.
-
-To use this checkout:
+Requires Node.js 22+ and the Ledger Ethereum app.
 
 ```sh
 git clone https://github.com/ustas-eth/ledger-offline-sign.git
@@ -23,59 +17,64 @@ npm ci
 npm start
 ```
 
-To install the checkout as a command:
+To install the checkout as a command, run `npm install -g .`, then
+`ledger-offline-sign`. The npm registry release may lag behind this checkout.
+Install dependencies before disconnecting from the network; `npx` can download
+packages at runtime.
 
-```sh
-npm install -g .
-ledger-offline-sign
-```
-
-The existing npm release is also available with `npm install -g ledger-offline-sign`;
-it may lag behind this checkout. Avoid `npx` on the offline machine: it can try
-to download packages. `ledger-offline-sign --help` and `--version` work without a
-connected device.
-
-**Linux:** native USB dependencies may need compilation. On Debian/Ubuntu, install
-`build-essential python3 pkg-config libusb-1.0-0-dev libudev-dev` first. Other
-Linux distributions need the equivalent packages. Follow Ledger's
-[USB permissions guidance](https://github.com/LedgerHQ/udev-rules) if the device
-is inaccessible; don't run this utility as root.
+On Debian/Ubuntu, native USB builds may need `build-essential python3 pkg-config
+libusb-1.0-0-dev libudev-dev`. Other distributions need equivalent packages. If
+USB access fails, check [Ledger's udev rules](https://github.com/LedgerHQ/udev-rules).
+Don't run the utility as root.
 
 ## Sign
 
-1. Prepare the nonce (including pending transactions), gas limit, fees, and
-   recipient/contract details before going offline. Nothing is fetched for you.
-2. Choose the account, network, and transfer or contract call. Bare amounts mean
-   **wei**; use `0.1 ether` or `1 gwei` for native value and fees. Token amounts
-   use the selected token's decimals.
-3. Connect and unlock the Ledger, open Ethereum, and close other wallet apps.
-   Verify the account address on the device.
-4. Review the recipient, amount, nonce, calldata, gas limit, and fee cap. Confirm
-   signing in the terminal, then on the Ledger.
-5. Copy the raw signed transaction. **Anyone holding it can broadcast it.**
+Choose an account, network, and transaction. Enter the nonce, fees, and gas limit;
+the app does not fetch or estimate them. Common chains and tokens appear first.
+Use a custom contract or derivation path when needed.
 
-The maximum fee includes the priority fee. The execution cost cap excludes any
-additional L2 data fees. No balances, transaction simulation, gas estimates, or
-nonce checks are available offline. Static token presets are conveniences:
-verify the chain, contract, and decimals independently.
+Native amounts accept `wei`, `gwei`, or `ether`; a bare number means wei. Token
+amounts use the selected token's decimals. Only EIP-1559 transactions and chains
+with 18-decimal native units are supported.
 
-For contract calls, the device may require blind signing. The terminal's decoded
-review is not a substitute for a trusted device display. Do not approve calldata
-you do not understand. Ctrl+C cancels terminal prompts; reject a pending request
-on the device to leave the signing step.
+Connect the Ledger, unlock it, open Ethereum, and close other wallet apps. Verify
+the address on the device, review the transaction, then approve signing. The
+result is printed as one line of raw signed bytes. Anyone holding those bytes
+can broadcast the transaction.
 
-## Privacy
+Contract calls may require blind signing. Check the contract, recipient, amount,
+and calldata independently. The fee cap shown covers execution gas; extra L2
+data fees are not included.
 
-No RPC, telemetry, runtime metadata downloads, automatic broadcast, session files,
-or transaction logs. The Ledger SDK is called with online metadata resolution
-disabled, and the returned signature is checked against the reviewed account
-and transaction.
+## Lists and broadcasting
 
-Your terminal can retain scrollback; terminal recording, OS monitoring, swap,
-crash dumps, and package-manager caches/logs are outside this tool. Network
-isolation provides a stronger boundary than application promises.
-[Privacy details](docs/privacy.md) · [Contributing](CONTRIBUTING.md)
+```sh
+npm start -- --online          # Public lists and optional broadcasting after signing
+npm start -- --refresh-lists   # Download lists, then exit; no Ledger needed
+npm start -- --lists           # Use cached lists while offline
+npm start -- --broadcast       # Paste an existing signed transaction and select an RPC
+npm start -- --local-only      # Sign, then optionally broadcast through a local node
+```
 
-The screenshot shows the actual interface with a simulated Ledger and dummy
-addresses. Automated tests use fake devices; the renovated flow still needs a
-physical-device smoke test before a release.
+Lists come from [Chainlist](https://chainlist.org/) and
+[Uniswap](https://github.com/Uniswap/default-token-list). Online mode refreshes
+lists older than 24 hours. Cached lists remain usable offline. Type to search
+list menus; `--testnets` includes test networks. `--no-cache` skips cache reads
+and writes.
+
+Broadcasting uses the RPC you select. The picker lists endpoints from the cached
+chain list, plus local and custom options. Add `--online` to `--broadcast` to
+fetch lists if needed. The app checks the RPC's chain ID, then asks before sending.
+It never retries or switches providers automatically. A successful submission
+means the RPC accepted the transaction, not that it was mined.
+
+Providers claiming no request logging appear first. These are attributed claims,
+not verified privacy guarantees. The RPC receives your IP and transaction;
+broadcasting makes transaction data public.
+
+No wallets, signed transactions, custom RPC URLs, or search history are saved.
+Only public lists are cached. Terminal scrollback and external recording can
+retain what you see or enter. [Privacy details](docs/privacy.md).
+
+The screenshot uses a simulated Ledger and dummy addresses.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for tests and packaging.

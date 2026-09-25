@@ -1,4 +1,4 @@
-import { select, text, isCancel } from "@clack/prompts"
+import { select, text, isCancel, autocomplete } from "@clack/prompts"
 
 export class Cancelled extends Error {}
 
@@ -8,7 +8,8 @@ export function checkCancel(value) {
 }
 
 export async function selectOrCustom(selectData, textData) {
-  const result = await selectOrRevert(selectData)
+  const { searchable, ...options } = selectData
+  const result = checkCancel(await (searchable ? autocomplete : select)(options))
   return result === "Custom" ? textOrRevert(textData) : result
 }
 

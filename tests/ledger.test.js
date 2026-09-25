@@ -140,3 +140,26 @@ for (const outcome of ["cancel", "ctrl-c", "address-error", "sign-error", "succe
     if (outcome === "cancel" || outcome === "ctrl-c") assert.ok(!calls.includes("sign"))
   })
 }
+
+test("online mode offers broadcast only after verification, device close and signed output", async (t) => {
+  const order = []
+  t.mock.method(console, "log", () => order.push("output"))
+  await run({
+    online: true,
+    ui: { intro() {}, note() {}, outro() {}, confirm: async () => true },
+    collect: async () => ({ path, tx, metadata: {} }),
+    connect: async () => ({
+      getAddress: async () => wallet.address,
+      sign: async () => {
+        order.push("sign")
+        return { serialized: "fixture-bytes", hash: "fixture-hash" }
+      },
+      close: async () => order.push("close"),
+    }),
+    broadcast: async (bytes) => {
+      assert.equal(bytes, "fixture-bytes")
+      order.push("broadcast")
+    },
+  })
+  assert.deepEqual(order, ["sign", "close", "output", "broadcast"])
+})

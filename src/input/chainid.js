@@ -2,13 +2,18 @@ import { selectOrCustom, validate } from "../lib.js"
 import { integer } from "../transaction.js"
 import { chains } from "../data/chains.js"
 
-export async function getChainId() {
+export async function getChainId(available = chains, searchable = false) {
   return selectOrCustom(
     {
       message: "Network",
+      searchable,
       initialValue: "1",
       options: [
-        ...chains.map(({ id, name }) => ({ value: id, label: name, hint: `chain ID ${id}` })),
+        ...available.map(({ id, name }) => ({
+          value: id,
+          label: searchable ? `${name} (${id})` : name,
+          hint: `chain ID ${id}`,
+        })),
         { value: "Custom", label: "Custom chain ID" },
       ],
     },

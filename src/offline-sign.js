@@ -7,15 +7,16 @@ import { getChainId } from "./input/chainid.js"
 import { getNonce } from "./input/nonce.js"
 import { getCalldata } from "./input/calldata.js"
 import { getGas } from "./input/gas.js"
-import { chains } from "./data/chains.js"
+import { makeCatalog } from "./catalog.js"
+import { broadcastPrompt } from "./broadcast.js"
 
-export async function collectTransaction() {
+export async function collectTransaction(catalog = makeCatalog(), searchable = false) {
   const path = await getDerivationPath()
-  const chainId = await getChainId()
+  const chainId = await getChainId(catalog.chains, searchable)
   const nonce = await getNonce()
-  const call = await getCalldata(chainId)
+  const call = await getCalldata(chainId, catalog.tokens, searchable)
   const gas = await getGas()
-  const chain = chains.find((item) => item.id === String(chainId))
+  const chain = catalog.chains.find((item) => item.id === String(chainId))
   return {
     path,
     tx: buildTransaction({ chainId, nonce, ...call, ...gas }),
@@ -23,13 +24,24 @@ export async function collectTransaction() {
   }
 }
 
-export async function run({ ui = prompts, collect = collectTransaction, connect = openLedger } = {}) {
+export async function run({
+  ui = prompts,
+  collect,
+  connect = openLedger,
+  catalog = makeCatalog(),
+  online = false,
+  localOnly = false,
+  searchable = false,
+  broadcast = broadcastPrompt,
+} = {}) {
   ui.intro("Ledger Offline Sign")
   ui.note(
-    "No RPC, metadata downloads, or transaction broadcast.\nHave your nonce, fees, and contract details ready.",
-    "Offline signing",
+    online || localOnly
+      ? "Signing runs offline. Broadcasting is optional after signing.\nHave your nonce, fees, and contract details ready."
+      : "No RPC is used. Broadcasting is disabled.\nHave your nonce, fees, and contract details ready.",
+    "Signing",
   )
-  const { path, tx, metadata } = await collect()
+  const { path, tx, metadata } = await (collect ? collect() : collectTransaction(catalog, searchable))
   // Snapshot the precise payload before review and pass only that snapshot to signing.
   const unsignedSerialized = tx.unsignedSerialized
   ui.note(
@@ -56,5 +68,6 @@ export async function run({ ui = prompts, collect = collectTransaction, connect 
   ui.outro("Raw signed transaction (anyone holding it can broadcast it):")
   // One uninterrupted line for copying; never write transaction data to a file.
   console.log(signed.serialized)
+  if (online || localOnly) await broadcast(signed.serialized, { catalog, ui, localOnly })
   return signed
 }

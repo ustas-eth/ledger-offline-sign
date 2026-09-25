@@ -2,7 +2,7 @@ import { selectOrCustom, selectOrRevert, textOrRevert, validate } from "../lib.j
 import { address, amount, calldata, integer, IERC20, nativeAmount } from "../transaction.js"
 import erc20ByChain from "../data/erc20.js"
 
-export async function getCalldata(chainId) {
+export async function getCalldata(chainId, tokenLists = erc20ByChain, searchable = false) {
   const kind = await selectOrRevert({
     message: "Transaction",
     options: [
@@ -12,11 +12,12 @@ export async function getCalldata(chainId) {
     ],
   })
   if (kind === "erc20") {
-    const tokens = erc20ByChain[chainId] ?? []
+    const tokens = tokenLists[chainId] ?? []
     const to = address(
       await selectOrCustom(
         {
-          message: "Token (built-in metadata is static; verify the contract)",
+          message: "Token (local metadata; verify the contract)",
+          searchable,
           options: [
             ...tokens.map((token) => ({ value: token.value, label: token.symbol, hint: token.value })),
             { value: "Custom", label: "Custom token" },
@@ -46,7 +47,7 @@ export async function getCalldata(chainId) {
       to,
       value: 0n,
       data: IERC20.encodeFunctionData("transfer", [recipient, units]),
-      token: { symbol: known?.symbol ?? "custom token", decimals },
+      token: { symbol: known?.symbol ?? "custom token", decimals, source: known?.source ?? "user-entered" },
     }
   }
   const to = address(

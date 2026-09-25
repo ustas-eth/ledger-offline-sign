@@ -21,3 +21,16 @@ test("unknown arguments and non-terminal signing fail clearly", () => {
   assert.match(noTerminal.stderr, /requires a terminal/)
   assert.doesNotMatch(noTerminal.stderr, /node-hid|stack|at file:/)
 })
+
+test("conflicting online options fail before any download", () => {
+  for (const args of [
+    ["--online", "--local-only"],
+    ["--refresh-lists", "--local-only"],
+    ["--refresh-lists", "--broadcast"],
+    ["--refresh-lists", "--no-cache"],
+  ]) {
+    const result = run(...args)
+    assert.equal(result.status, 2)
+    assert.doesNotMatch(result.stdout + result.stderr, /Downloaded|credential/)
+  }
+})

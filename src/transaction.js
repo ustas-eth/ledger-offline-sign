@@ -94,7 +94,7 @@ export function transactionReview(tx, from, { chainName, symbol = "native", toke
   if (token) {
     const [recipient, units] = IERC20.decodeFunctionData("transfer", tx.data)
     lines.push(
-      `Token          ${token.symbol} (${token.decimals} decimals; local metadata)`,
+      `Token          ${token.symbol} (${token.decimals} decimals; ${token.source || "local metadata"})`,
       `Recipient      ${recipient}`,
       `Token amount   ${formatTokenAmount(units, token.decimals)} ${token.symbol}`,
       `Token units    ${units}`,
